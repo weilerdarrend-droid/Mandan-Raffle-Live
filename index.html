@@ -11,7 +11,7 @@ body{background:radial-gradient(circle at 50% 0,#155c34 0,transparent 32%),linea
 .gun{font-size:21px;font-weight:900;margin-top:5px}.cal{font-size:14px;color:#dce6df;margin-top:4px}.reveal{margin-top:14px;padding:14px;background:#041009;border:1px solid #d0a02e;border-radius:12px}
 .ticket{font-size:28px;font-weight:900;line-height:1;margin:8px 0 4px;text-shadow:0 4px 8px #000}.winner{font-size:38px;font-weight:1000;line-height:1.05;margin:8px 0;text-shadow:0 4px 8px #000}
 .head{padding:12px 14px 7px;display:flex;justify-content:space-between;align-items:center}.small{font-size:11px;color:#aebdb4}.next{padding:5px 14px 14px;font-weight:900;font-size:16px}
-.rows{padding:0 14px 10px}.row{display:grid;grid-template-columns:45px 1fr auto;gap:8px;padding:10px 0;border-top:1px solid #ffffff18;font-size:12px;align-items:center}.n{color:#e7bd4b;font-weight:900}.r{font-weight:800}.person{text-align:right}
+.rows{padding:0 14px 10px;max-height:180px;overflow:hidden;scroll-behavior:smooth}.row{display:grid;grid-template-columns:45px 1fr auto;gap:8px;padding:10px 0;border-top:1px solid #ffffff18;font-size:12px;align-items:center}.n{color:#e7bd4b;font-weight:900}.r{font-weight:800}.person{text-align:right}
 .side{padding:3px 14px 14px;display:flex;justify-content:space-between;align-items:end}.sideNum{font-size:30px;font-weight:1000}
 .sponsor{padding:14px;text-align:center;font-size:11px;background:#0003}.foot{padding:0 20px 18px;text-align:center;color:#7f9186;font-size:10px;line-height:1.45}
 .demo{position:sticky;bottom:0;background:#000f;border-top:1px solid #876a22;text-align:center;padding:8px}button{background:#d9aa34;border:0;border-radius:7px;padding:8px 10px;margin:2px;font-weight:900}
@@ -20,25 +20,43 @@ body{background:radial-gradient(circle at 50% 0,#155c34 0,transparent 32%),linea
 <div class="wrap">
 <div class="card main"><div class="label" id="status">Winner Revealed</div><div class="gun" id="gun">Gun #12 — Browning X-Bolt</div><div class="cal" id="cal">6.5 Creedmoor</div>
 <div class="reveal" id="reveal"><div class="label">Winning Ticket</div><div class="ticket" id="ticket">#184627</div><div class="winner" id="winner">Jordan Smith</div><div class="small" style="margin-top:5px">Official raffle result</div></div></div>
-<div class="card"><div class="head"><div class="label">Up Next</div><div class="small">Gun #11</div></div><div class="next">Ruger American Rifle<br><span class="small">.308 Winchester</span></div></div>
-<div class="card"><div class="head"><div class="label">Recent Winners</div><div class="small">Live results</div></div><div class="rows">
-<div class="row"><div class="n">#13</div><div class="r">Benelli Nova</div><div class="person">Alex R.</div></div><div class="row"><div class="n">#14</div><div class="r">Savage Axis</div><div class="person">Chris M.</div></div><div class="row"><div class="n">#15</div><div class="r">Henry Golden Boy</div><div class="person">Taylor K.</div></div></div></div>
-<div class="card"><div class="head"><div class="label">Side Raffle</div><div class="small">Latest result</div></div><div class="side"><div><div class="small">Winning Ticket</div><div class="sideNum">#5831</div></div><div class="small">RED TICKET</div></div></div>
+<div class="card"><div class="head"><div class="label">Up Next</div><div class="small" id="nextGun">—</div></div><div class="next" id="nextPrize">Waiting for next drawing</div></div>
+<div class="card"><div class="head"><div class="label">Recent Winners</div><div class="small">Live results</div></div><div class="rows" id="winnerRows"><div class="small" style="padding:12px 0">No winners announced yet</div></div></div>
+<div class="card"><div class="head"><div class="label">Side Raffle</div><div class="small">Latest result</div></div><div class="side"><div><div class="small">Winning Ticket</div><div class="sideNum" id="sideNumber">—</div></div><div class="small" id="sideColor">Awaiting result</div></div></div>
 <div class="card sponsor"><span class="label">Tonight's Raffle Sponsors</span><br>Thank you for supporting Mandan Baseball</div>
 </div><div class="foot">Results update automatically when connected to the live raffle system.<br>This fan view is read-only.</div>
 </div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (()=>{
- const URL='https://thfgexrbckzabsyzshro.supabase.co', KEY='sb_publishable_WRIjhgSGtQAUM3t3-cSLvg_4i_xJ3pl', EVENT='mandan-baseball-main';
- const el=id=>document.getElementById(id), client=window.supabase?.createClient(URL,KEY);
- let last='';
- function render(d){if(!d)return;el('status').textContent=({winner:'Winner Revealed',upnext:'Up Next',drawing:'Drawing In Progress',side:'Side Raffle',final:'Raffle Complete'})[d.mode]||'Raffle Live';
- el('gun').textContent=(d.gun_number?'Gun #'+d.gun_number+' — ':'')+(d.prize_name||'');el('cal').textContent=d.caliber||'';
- el('reveal').style.display=d.mode==='winner'?'block':'none';el('ticket').textContent=d.ticket_number?'#'+d.ticket_number:'';el('winner').textContent=d.winner_name||'';
- el('connection').textContent='Connected • Updated '+new Date(d.updated_at).toLocaleTimeString();last=d.updated_at;
+ const URL='https://thfgexrbckzabsyzshro.supabase.co',KEY='sb_publishable_WRIjhgSGtQAUM3t3-cSLvg_4i_xJ3pl',EVENT='mandan-baseball-main';
+ const el=id=>document.getElementById(id),client=window.supabase?.createClient(URL,KEY);
+ let last='',historySig='',scrollTimer=null;
+ function render(d){if(!d)return;
+  el('status').textContent=({winner:'WINNER REVEALED!',upnext:'AWAITING WINNER',drawing:'AWAITING WINNER',side:'SIDE RAFFLE',final:'RAFFLE COMPLETE'})[d.mode]||'AWAITING WINNER';
+  el('gun').textContent=(d.gun_number?'Gun #'+d.gun_number+' — ':'')+(d.prize_name||'');el('cal').textContent=d.caliber||'';
+  el('reveal').style.display=d.mode==='winner'?'block':'none';el('ticket').textContent=d.ticket_number?'#'+d.ticket_number:'';el('winner').textContent=d.winner_name||'';
+  el('nextGun').textContent=d.next_gun_number?'Gun #'+d.next_gun_number:'Final drawing';
+  el('nextPrize').textContent=d.next_prize_name?(d.next_prize_name+(d.next_caliber?' • '+d.next_caliber:'')):'—';
+  if(d.side_ticket_number)el('sideNumber').textContent='#'+d.side_ticket_number;
+  if(d.side_ticket_color)el('sideColor').textContent=d.side_ticket_color.toUpperCase()+' TICKET';
+  el('connection').textContent='Connected • Updated '+new Date(d.updated_at).toLocaleTimeString();last=d.updated_at;
  }
- async function refresh(){if(!client){el('connection').textContent='Unable to load connection library';return}const {data,error}=await client.from('raffle_live_state').select('*').eq('event_key',EVENT).single();if(error){el('connection').textContent='Connection error — retrying';return}if(data.updated_at!==last)render(data)}
+ function renderHistory(rows){const signature=JSON.stringify(rows);if(signature===historySig)return;historySig=signature;
+  const container=el('winnerRows');container.replaceChildren();
+  if(!rows.length){const n=document.createElement('div');n.className='small';n.style.padding='12px 0';n.textContent='No winners announced yet';container.append(n);return;}
+  for(const w of rows){const r=document.createElement('div');r.className='row';
+   for(const [cls,value] of [['n','#'+w.gun_number],['r',w.prize_name||'Gun prize'],['person',w.winner_name||'']]){const c=document.createElement('div');c.className=cls;c.textContent=value;r.append(c)}container.append(r);}
+  container.scrollTop=0;
+  if(scrollTimer)clearInterval(scrollTimer);
+  scrollTimer=setInterval(()=>{if(container.scrollHeight<=container.clientHeight)return;const end=container.scrollHeight-container.clientHeight;container.scrollTop=container.scrollTop>=end-3?0:container.scrollTop+30;},2200);
+ }
+ async function refresh(){if(!client){el('connection').textContent='Unable to load connection library';return;}
+  const {data,error}=await client.from('raffle_live_state').select('*').eq('event_key',EVENT).single();
+  if(error){el('connection').textContent='Connection error — retrying';return;}if(data.updated_at!==last)render(data);
+  const h=await client.from('raffle_winners').select('gun_number,prize_name,winner_name').eq('event_key',EVENT).order('gun_number',{ascending:true});
+  if(!h.error)renderHistory(h.data||[]);
+ }
  refresh();setInterval(refresh,4000);
- if(client)client.channel('raffle-fan-board-demo').on('postgres_changes',{event:'UPDATE',schema:'public',table:'raffle_live_state',filter:'event_key=eq.'+EVENT},p=>render(p.new)).subscribe();
+ if(client)client.channel('raffle-fan-board-241').on('postgres_changes',{event:'UPDATE',schema:'public',table:'raffle_live_state',filter:'event_key=eq.'+EVENT},p=>{render(p.new);refresh();}).on('postgres_changes',{event:'*',schema:'public',table:'raffle_winners'},()=>refresh()).subscribe();
 })();
 </script></body></html>
