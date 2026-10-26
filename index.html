@@ -12,7 +12,7 @@ body{background:radial-gradient(circle at 50% 0,#155c34 0,transparent 32%),linea
 .ticket{font-size:28px;font-weight:900;line-height:1;margin:8px 0 4px;text-shadow:0 4px 8px #000}.winner{font-size:38px;font-weight:1000;line-height:1.05;margin:8px 0;text-shadow:0 4px 8px #000}
 .head{padding:12px 14px 7px;display:flex;justify-content:space-between;align-items:center}.small{font-size:11px;color:#aebdb4}.next{padding:5px 14px 14px;font-weight:900;font-size:16px}
 .rows{padding:0 14px 10px;max-height:180px;overflow:hidden;scroll-behavior:smooth}.row{display:grid;grid-template-columns:45px 1fr auto;gap:8px;padding:10px 0;border-top:1px solid #ffffff18;font-size:12px;align-items:center}.n{color:#e7bd4b;font-weight:900}.r{font-weight:800}.person{text-align:right}
-.side{padding:3px 14px 14px;display:flex;justify-content:space-between;align-items:end}.sideNum{font-size:30px;font-weight:1000}
+.side{padding:3px 14px 14px;display:flex;justify-content:space-between;align-items:end}.sideNum{font-size:30px;font-weight:1000;transition:color .25s}.sideColorBadge{display:inline-block;font-size:13px;font-weight:900;letter-spacing:.6px;padding:9px 12px;border:2px solid #718679;border-radius:9px;background:#12251a;color:#fff;text-align:center;transition:background .25s,color .25s,border-color .25s}
 .sponsor{padding:14px;text-align:center;font-size:11px;background:#0003}.foot{padding:0 20px 18px;text-align:center;color:#7f9186;font-size:10px;line-height:1.45}
 .demo{position:sticky;bottom:0;background:#000f;border-top:1px solid #876a22;text-align:center;padding:8px}button{background:#d9aa34;border:0;border-radius:7px;padding:8px 10px;margin:2px;font-weight:900}
 </style></head><body><div class="phone"><div id="connection" style="text-align:center;padding:7px;font-size:11px;color:#e7bd4b">Connecting to live raffle…</div>
@@ -22,7 +22,7 @@ body{background:radial-gradient(circle at 50% 0,#155c34 0,transparent 32%),linea
 <div class="reveal" id="reveal"><div class="label">Winning Ticket</div><div class="ticket" id="ticket">#184627</div><div class="winner" id="winner">Jordan Smith</div><div class="small" style="margin-top:5px">Official raffle result</div></div></div>
 <div class="card"><div class="head"><div class="label">Up Next</div><div class="small" id="nextGun">—</div></div><div class="next" id="nextPrize">Waiting for next drawing</div></div>
 <div class="card"><div class="head"><div class="label">Recent Winners</div><div class="small">Live results</div></div><div class="rows" id="winnerRows"><div class="small" style="padding:12px 0">No winners announced yet</div></div></div>
-<div class="card"><div class="head"><div class="label">Side Raffle</div><div class="small">Latest result</div></div><div class="side"><div><div class="small">Winning Ticket</div><div class="sideNum" id="sideNumber">—</div></div><div class="small" id="sideColor">Awaiting result</div></div></div>
+<div class="card"><div class="head"><div class="label">Side Raffle</div><div class="small">Latest result</div></div><div class="side"><div><div class="small">Winning Ticket</div><div class="sideNum" id="sideNumber">—</div></div><div class="sideColorBadge" id="sideColor">Awaiting result</div></div></div>
 <div class="card sponsor"><span class="label">Tonight's Raffle Sponsors</span><br>Thank you for supporting Mandan Baseball</div>
 </div><div class="foot">Results update automatically when connected to the live raffle system.<br>This fan view is read-only.</div>
 </div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -38,7 +38,25 @@ body{background:radial-gradient(circle at 50% 0,#155c34 0,transparent 32%),linea
   el('nextGun').textContent=d.next_gun_number?'Gun #'+d.next_gun_number:'Final drawing';
   el('nextPrize').textContent=d.next_prize_name?(d.next_prize_name+(d.next_caliber?' • '+d.next_caliber:'')):'—';
   if(d.side_ticket_number)el('sideNumber').textContent='#'+d.side_ticket_number;
-  if(d.side_ticket_color)el('sideColor').textContent=d.side_ticket_color.toUpperCase()+' TICKET';
+  if(d.side_ticket_color){
+   const name=String(d.side_ticket_color).trim().toLowerCase();
+   const colors={
+    red:['#ff6262','#651717','#ff6262'],
+    blue:['#71b9ff','#123e76','#71b9ff'],
+    green:['#70e59c','#125334','#70e59c'],
+    yellow:['#ffe478','#66520a','#ffe478'],
+    orange:['#ffb36b','#70350a','#ffb36b'],
+    pink:['#ff99d1','#69264e','#ff99d1'],
+    purple:['#c6a1ff','#4a277c','#c6a1ff'],
+    white:['#ffffff','#424b45','#ffffff'],
+    black:['#ffffff','#191919','#888888']
+   };
+   const [fg,bg,border]=colors[name]||['#ffffff','#253b2e','#718679'];
+   const badge=el('sideColor'),number=el('sideNumber');
+   badge.textContent=name.toUpperCase()+' TICKET';
+   badge.style.color=fg;badge.style.backgroundColor=bg;badge.style.borderColor=border;
+   number.style.color=fg;
+  }
   el('connection').textContent='Connected • Updated '+new Date(d.updated_at).toLocaleTimeString();last=d.updated_at;
  }
  function renderHistory(rows){const signature=JSON.stringify(rows);if(signature===historySig)return;historySig=signature;
